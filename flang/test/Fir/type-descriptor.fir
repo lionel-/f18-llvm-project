@@ -6,7 +6,7 @@ fir.global internal @_QFfooEx2 : !fir.box<!fir.heap<!type_defined_elsewhere>> {
   %1 = fir.embox %0 : (!fir.heap<!type_defined_elsewhere>) -> !fir.box<!fir.heap<!type_defined_elsewhere>>
   fir.has_value %1 : !fir.box<!fir.heap<!type_defined_elsewhere>>
 }
-// CHECK: @_QMsome_moduleE.dt.type_defined_elsewhere = extern_weak global i8
+// CHECK: @_QMsome_moduleE.dt.type_defined_elsewhere = available_externally constant i8
 // CHECK: @_QFfooEx2 = internal global { %_QMsome_moduleTtype_defined_elsewhere*, i64, i32, i8, i8, i8, i8, i8*, [1 x i64] }
 // CHECK-SAME: { %_QMsome_moduleTtype_defined_elsewhere* null, i64 ptrtoint (%_QMsome_moduleTtype_defined_elsewhere* getelementptr (%_QMsome_moduleTtype_defined_elsewhere, %_QMsome_moduleTtype_defined_elsewhere* null, i32 1) to i64),
 // CHECK-SAME: i32 20180515, i8 0, i8 42, i8 2, i8 1, i8* @_QMsome_moduleE.dt.type_defined_elsewhere, [1 x i64] undef }
