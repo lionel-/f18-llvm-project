@@ -1,5 +1,4 @@
 ! RUN: %flang_fc1 -emit-llvm %s -o - | FileCheck %s
-! RUN: %flang -emit-llvm -S %s -o - | FileCheck %s
 
 ! CHECK: ; ModuleID = 'FIRModule'
 ! CHECK: define void @_QQmain()

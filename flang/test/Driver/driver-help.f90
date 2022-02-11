@@ -42,7 +42,6 @@
 ! HELP-NEXT: -flogical-abbreviations Enable logical abbreviations
 ! HELP-NEXT: -fno-automatic         Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
 ! HELP-NEXT: -fno-color-diagnostics  Disable colors in diagnostics
-! HELP-NEXT: -fno-integrated-as      Disable the integrated assembler
 ! HELP-NEXT: -fopenacc              Enable OpenACC
 ! HELP-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
 ! HELP-NEXT: -fxor-operator         Enable .XOR. as a synonym of .NEQV.
@@ -56,8 +55,6 @@
 ! HELP-NEXT: -print-target-triple    Print the normalized target triple
 ! HELP-NEXT: -print-targets          Print the registered targets
 ! HELP-NEXT: -P                     Disable linemarker output in -E mode
-! HELP-NEXT: -save-temps=<value>    Save intermediate compilation results.
-! HELP-NEXT: -save-temps            Save intermediate compilation results
 ! HELP-NEXT: -std=<value>           Language standard to compile for
 ! HELP-NEXT: -S                     Only run preprocess and compilation steps
 ! HELP-NEXT: --target=<value>       Generate code for the given target
@@ -74,7 +71,6 @@
 ! HELP-FC1-NEXT:OPTIONS:
 ! HELP-FC1-NEXT: -cpp                   Enable predefined and command line preprocessor macros
 ! HELP-FC1-NEXT: -D <macro>=<value>     Define <macro> to <value> (or 1 if <value> omitted)
-! HELP-FC1-NEXT: -emit-llvm-bc          Build ASTs then convert to LLVM, emit .bc file
 ! HELP-FC1-NEXT: -emit-llvm             Use the LLVM representation for assembler and object files
 ! HELP-FC1-NEXT: -emit-mlir             Build the parse tree, then lower it to MLIR and dump
 ! HELP-FC1-NEXT: -emit-obj Emit native object files

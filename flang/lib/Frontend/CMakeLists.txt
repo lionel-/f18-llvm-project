@@ -26,7 +26,6 @@ add_flang_library(flangFrontend
   clangBasic
   clangDriver
   LLVMAnalysis
-  LLVMPasses
   FIRDialect
   FIRAnalysis
   FIRSupport
@@ -40,7 +39,6 @@ add_flang_library(flangFrontend
 
   LINK_COMPONENTS
   Option
-  IRReader
   Support
   FrontendOpenACC
   FrontendOpenMP

@@ -37,9 +37,6 @@ enum ActionKind {
   /// Emit a .llvm file
   EmitLLVM,
 
-  /// Emit a .bc file
-  EmitLLVMBitcode,
-
   /// Emit a .o file.
   EmitObj,
 

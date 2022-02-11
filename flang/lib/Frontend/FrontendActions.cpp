@@ -36,13 +36,10 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/IR/LegacyPassManager.h"
-#include "llvm/IRReader/IRReader.h"
-#include "llvm/MC/TargetRegistry.h"
-#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include <clang/Basic/Diagnostic.h>
@@ -69,15 +66,6 @@ bool PrescanAndSemaDebugAction::BeginSourceFileAction() {
 }
 
 bool CodeGenAction::BeginSourceFileAction() {
-  llvmCtx_ = std::make_unique<llvm::LLVMContext>();
-  if (this->currentInput().kind().GetLanguage() == Language::LLVM_IR) {
-    // Parse the bitcode...
-    SMDiagnostic err;
-    llvmModule_ = parseIRFile(currentInput().file(), err, *llvmCtx_);
-
-    return (nullptr != llvmModule_);
-  }
-
   bool res = RunPrescan() && RunParse() && RunSemanticChecks();
   if (!res)
     return res;
@@ -488,6 +476,7 @@ void CodeGenAction::GenerateLLVMIR() {
 
   // Translate to LLVM IR
   auto optName = mlirMod.getName();
+  llvmCtx_ = std::make_unique<llvm::LLVMContext>();
   llvmModule_ = mlir::translateModuleToLLVMIR(
       mlirMod, *llvmCtx_, optName ? *optName : "FIRModule");
 
@@ -501,15 +490,13 @@ void CodeGenAction::GenerateLLVMIR() {
 
 void EmitLLVMAction::ExecuteAction() {
   CompilerInstance &ci = this->instance();
-  // Generate an LLVM module if it's not already present (it will already be
-  // present if the input file is an LLVM IR/BC file).
-  if (!llvmModule_)
-    GenerateLLVMIR();
+  GenerateLLVMIR();
 
   // Print the generated LLVM IR. If there is no pre-defined output stream to
   // print to, create an output file.
   std::unique_ptr<llvm::raw_ostream> os;
   if (ci.IsOutputStreamNull()) {
+    // Lower from the LLVM dialect to LLVM IR
     os = ci.CreateDefaultOutputFile(
         /*Binary=*/true, /*InFile=*/GetCurrentFileOrBufferName(), "ll");
     if (!os) {
@@ -526,56 +513,13 @@ void EmitLLVMAction::ExecuteAction() {
   } else {
     llvmModule_->print(*os, /*AssemblyAnnotationWriter=*/nullptr);
   }
-}
 
-void EmitLLVMBitcodeAction::ExecuteAction() {
-  CompilerInstance &ci = this->instance();
-  // Generate an LLVM module if it's not already present (it will already be
-  // present if the input file is an LLVM IR/BC file).
-  if (!llvmModule_)
-    GenerateLLVMIR();
-
-  ModulePassManager MPM;
-  ModuleAnalysisManager MAM;
-
-  // Create `Target`
-  std::string error;
-  std::string theTriple = llvmModule_->getTargetTriple();
-  const llvm::Target *theTarget =
-      TargetRegistry::lookupTarget(theTriple, error);
-  assert(theTarget && "Failed to create Target");
-
-  // Create `TargetMachine`
-  std::unique_ptr<TargetMachine> TM;
-
-  TM.reset(theTarget->createTargetMachine(
-      theTriple, /*CPU=*/"", /*Features=*/"", llvm::TargetOptions(), None));
-  llvmModule_->setDataLayout(TM->createDataLayout());
-  assert(TM && "Failed to create TargetMachine");
-
-  PassBuilder PB(TM.get());
-  PB.registerModuleAnalyses(MAM);
-
-  // Generate an output file
-  std::unique_ptr<llvm::raw_ostream> os = ci.CreateDefaultOutputFile(
-      /*Binary=*/true, /*InFile=*/GetCurrentFileOrBufferName(), "bc");
-  if (!os) {
-    unsigned diagID = ci.diagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "failed to create the output file");
-    ci.diagnostics().Report(diagID);
-    return;
-  }
-
-  MPM.addPass(BitcodeWriterPass(*os));
-  MPM.run(*llvmModule_, MAM);
+  return;
 }
 
 void BackendAction::ExecuteAction() {
   CompilerInstance &ci = this->instance();
-  // Generate an LLVM module if it's not already present (it will already be
-  // present if the input file is an LLVM IR/BC file).
-  if (!llvmModule_)
-    GenerateLLVMIR();
+  GenerateLLVMIR();
 
   // Create `Target`
   std::string error;
@@ -638,17 +582,13 @@ void BackendAction::ExecuteAction() {
       ? llvm::CodeGenFileType::CGFT_AssemblyFile
       : llvm::CodeGenFileType::CGFT_ObjectFile;
   if (TM->addPassesToEmitFile(CodeGenPasses,
-          ci.IsOutputStreamNull() ? *os : ci.GetOutputStream(), nullptr,
-          cgft)) {
-    unsigned diagID =
-        ci.diagnostics().getCustomDiagID(clang::DiagnosticsEngine::Error,
-            "emission of this file type is not supported");
-    ci.diagnostics().Report(diagID);
-    return;
-  }
+          ci.IsOutputStreamNull() ? *os : ci.GetOutputStream(), nullptr, cgft))
+    assert(false && "Something went wrong");
 
   // Run the code-gen passes
   CodeGenPasses.run(*llvmModule_);
+
+  return;
 }
 
 void InitOnlyAction::ExecuteAction() {
