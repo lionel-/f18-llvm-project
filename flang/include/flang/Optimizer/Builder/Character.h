@@ -14,7 +14,11 @@
 #define FORTRAN_OPTIMIZER_BUILDER_CHARACTER_H
 
 #include "flang/Optimizer/Builder/BoxValue.h"
-#include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
+
+namespace fir {
+class FirOpBuilder;
+}
 
 namespace fir::factory {
 
@@ -185,12 +189,6 @@ private:
   mlir::Location loc;
 };
 
-// FIXME: Move these to Optimizer
-mlir::FuncOp getLlvmMemcpy(FirOpBuilder &builder);
-mlir::FuncOp getLlvmMemmove(FirOpBuilder &builder);
-mlir::FuncOp getLlvmMemset(FirOpBuilder &builder);
-mlir::FuncOp getRealloc(FirOpBuilder &builder);
-
 //===----------------------------------------------------------------------===//
 // Tools to work with Character dummy procedures
 //===----------------------------------------------------------------------===//
@@ -199,15 +197,6 @@ mlir::FuncOp getRealloc(FirOpBuilder &builder);
 /// as arguments along their length. The function type set in the tuple is the
 /// one provided by \p funcPointerType.
 mlir::Type getCharacterProcedureTupleType(mlir::Type funcPointerType);
-
-/// Is this tuple type holding a character function and its result length ?
-bool isCharacterProcedureTuple(mlir::Type type);
-
-/// Is \p tuple a value holding a character function address and its result
-/// length ?
-inline bool isCharacterProcedureTuple(mlir::Value tuple) {
-  return isCharacterProcedureTuple(tuple.getType());
-}
 
 /// Create a tuple<addr, len> given \p addr and \p len as well as the tuple
 /// type \p argTy. \p addr must be any function address, and \p len must be

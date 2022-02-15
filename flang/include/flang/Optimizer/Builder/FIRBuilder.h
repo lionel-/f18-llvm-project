@@ -223,7 +223,6 @@ public:
   mlir::FuncOp getNamedFunction(llvm::StringRef name) {
     return getNamedFunction(getModule(), name);
   }
-
   static mlir::FuncOp getNamedFunction(mlir::ModuleOp module,
                                        llvm::StringRef name);
 
