@@ -106,7 +106,8 @@ static void LocationHelper(const char *intrinsic, Descriptor &result,
     const Descriptor &x, int kind, const Descriptor *mask,
     Terminator &terminator) {
   ACCUMULATOR accumulator{x};
-  DoTotalReduction<CPPTYPE>(x, 0, mask, accumulator, intrinsic, terminator);
+  DoTotalReduction<CPPTYPE>(
+      x, /*hasDim=*/false, /*DIM=*/1, mask, accumulator, intrinsic, terminator);
   ApplyIntegerKind<LocationResultHelper<ACCUMULATOR>::template Functor, void>(
       kind, terminator, accumulator, result);
 }
@@ -331,9 +332,9 @@ private:
 
 template <TypeCategory CAT, int KIND, bool IS_MAXVAL>
 inline CppTypeFor<CAT, KIND> TotalNumericMaxOrMin(const Descriptor &x,
-    const char *source, int line, int dim, const Descriptor *mask,
+    const char *source, int line, bool hasDim, int dim, const Descriptor *mask,
     const char *intrinsic) {
-  return GetTotalReduction<CAT, KIND>(x, source, line, dim, mask,
+  return GetTotalReduction<CAT, KIND>(x, source, line, hasDim, dim, mask,
       NumericExtremumAccumulator<CAT, KIND, IS_MAXVAL>{x}, intrinsic);
 }
 
@@ -350,7 +351,8 @@ static void DoMaxMinNorm2(Descriptor &result, const Descriptor &x, int dim,
       terminator.Crash(
           "%s: could not allocate memory for result; STAT=%d", intrinsic, stat);
     }
-    DoTotalReduction<Type>(x, dim, mask, accumulator, intrinsic, terminator);
+    DoTotalReduction<Type>(
+        x, /*hasDim=*/false, dim, mask, accumulator, intrinsic, terminator);
     accumulator.GetResult(result.OffsetElement<Type>());
   } else {
     // Partial reduction
@@ -459,29 +461,29 @@ extern "C" {
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(MaxvalInteger1)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Integer, 1, true>(
-      x, source, line, dim, mask, "MAXVAL");
+      x, source, line, /*hasDim=*/true, dim, mask, "MAXVAL");
 }
 CppTypeFor<TypeCategory::Integer, 2> RTNAME(MaxvalInteger2)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Integer, 2, true>(
-      x, source, line, dim, mask, "MAXVAL");
+      x, source, line, /*hasDim=*/true, dim, mask, "MAXVAL");
 }
 CppTypeFor<TypeCategory::Integer, 4> RTNAME(MaxvalInteger4)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Integer, 4, true>(
-      x, source, line, dim, mask, "MAXVAL");
+      x, source, line, /*hasDim=*/true, dim, mask, "MAXVAL");
 }
 CppTypeFor<TypeCategory::Integer, 8> RTNAME(MaxvalInteger8)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Integer, 8, true>(
-      x, source, line, dim, mask, "MAXVAL");
+      x, source, line, /*hasDim=*/true, dim, mask, "MAXVAL");
 }
 #ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(MaxvalInteger16)(
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Integer, 16, true>(
-      x, source, line, dim, mask, "MAXVAL");
+      x, source, line, /*hasDim=*/true, dim, mask, "MAXVAL");
 }
 #endif
 
@@ -489,24 +491,24 @@ CppTypeFor<TypeCategory::Integer, 16> RTNAME(MaxvalInteger16)(
 CppTypeFor<TypeCategory::Real, 4> RTNAME(MaxvalReal4)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Real, 4, true>(
-      x, source, line, dim, mask, "MAXVAL");
+      x, source, line, /*hasDim=*/true, dim, mask, "MAXVAL");
 }
 CppTypeFor<TypeCategory::Real, 8> RTNAME(MaxvalReal8)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Real, 8, true>(
-      x, source, line, dim, mask, "MAXVAL");
+      x, source, line, /*hasDim=*/true, dim, mask, "MAXVAL");
 }
 #if LONG_DOUBLE == 80
 CppTypeFor<TypeCategory::Real, 10> RTNAME(MaxvalReal10)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Real, 10, true>(
-      x, source, line, dim, mask, "MAXVAL");
+      x, source, line, /*hasDim=*/true, dim, mask, "MAXVAL");
 }
 #elif LONG_DOUBLE == 128
 CppTypeFor<TypeCategory::Real, 16> RTNAME(MaxvalReal16)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Real, 16, true>(
-      x, source, line, dim, mask, "MAXVAL");
+      x, source, line, /*hasDim=*/true, dim, mask, "MAXVAL");
 }
 #endif
 
@@ -516,56 +518,64 @@ void RTNAME(MaxvalCharacter)(Descriptor &result, const Descriptor &x,
 }
 
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(MinvalInteger1)(const Descriptor &x,
-    const char *source, int line, int dim, const Descriptor *mask) {
+    const char *source, int line, bool hasDim, int dim,
+    const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Integer, 1, false>(
-      x, source, line, dim, mask, "MINVAL");
+      x, source, line, hasDim, dim, mask, "MINVAL");
 }
 CppTypeFor<TypeCategory::Integer, 2> RTNAME(MinvalInteger2)(const Descriptor &x,
-    const char *source, int line, int dim, const Descriptor *mask) {
+    const char *source, int line, bool hasDim, int dim,
+    const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Integer, 2, false>(
-      x, source, line, dim, mask, "MINVAL");
+      x, source, line, hasDim, dim, mask, "MINVAL");
 }
 CppTypeFor<TypeCategory::Integer, 4> RTNAME(MinvalInteger4)(const Descriptor &x,
-    const char *source, int line, int dim, const Descriptor *mask) {
+    const char *source, int line, bool hasDim, int dim,
+    const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Integer, 4, false>(
-      x, source, line, dim, mask, "MINVAL");
+      x, source, line, hasDim, dim, mask, "MINVAL");
 }
 CppTypeFor<TypeCategory::Integer, 8> RTNAME(MinvalInteger8)(const Descriptor &x,
-    const char *source, int line, int dim, const Descriptor *mask) {
+    const char *source, int line, bool hasDim, int dim,
+    const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Integer, 8, false>(
-      x, source, line, dim, mask, "MINVAL");
+      x, source, line, hasDim, dim, mask, "MINVAL");
 }
 #ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(MinvalInteger16)(
-    const Descriptor &x, const char *source, int line, int dim,
+    const Descriptor &x, const char *source, int line, bool hasDim, int dim,
     const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Integer, 16, false>(
-      x, source, line, dim, mask, "MINVAL");
+      x, source, line, hasDim, dim, mask, "MINVAL");
 }
 #endif
 
 // TODO: REAL(2 & 3)
 CppTypeFor<TypeCategory::Real, 4> RTNAME(MinvalReal4)(const Descriptor &x,
-    const char *source, int line, int dim, const Descriptor *mask) {
+    const char *source, int line, bool hasDim, int dim,
+    const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Real, 4, false>(
-      x, source, line, dim, mask, "MINVAL");
+      x, source, line, hasDim, dim, mask, "MINVAL");
 }
 CppTypeFor<TypeCategory::Real, 8> RTNAME(MinvalReal8)(const Descriptor &x,
-    const char *source, int line, int dim, const Descriptor *mask) {
+    const char *source, int line, bool hasDim, int dim,
+    const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Real, 8, false>(
-      x, source, line, dim, mask, "MINVAL");
+      x, source, line, hasDim, dim, mask, "MINVAL");
 }
 #if LONG_DOUBLE == 80
 CppTypeFor<TypeCategory::Real, 10> RTNAME(MinvalReal10)(const Descriptor &x,
-    const char *source, int line, int dim, const Descriptor *mask) {
+    const char *source, int line, bool hasDim, int dim,
+    const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Real, 10, false>(
-      x, source, line, dim, mask, "MINVAL");
+      x, source, line, hasDim, dim, mask, "MINVAL");
 }
 #elif LONG_DOUBLE == 128
 CppTypeFor<TypeCategory::Real, 16> RTNAME(MinvalReal16)(const Descriptor &x,
-    const char *source, int line, int dim, const Descriptor *mask) {
+    const char *source, int line, bool hasDim, int dim,
+    const Descriptor *mask) {
   return TotalNumericMaxOrMin<TypeCategory::Real, 16, false>(
-      x, source, line, dim, mask, "MINVAL");
+      x, source, line, hasDim, dim, mask, "MINVAL");
 }
 #endif
 
@@ -643,25 +653,25 @@ extern "C" {
 // TODO: REAL(2 & 3)
 CppTypeFor<TypeCategory::Real, 4> RTNAME(Norm2_4)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Real, 4>(
-      x, source, line, dim, mask, Norm2Accumulator<4>{x}, "NORM2");
+  return GetTotalReduction<TypeCategory::Real, 4>(x, source, line,
+      /*hasDim=*/true, dim, mask, Norm2Accumulator<4>{x}, "NORM2");
 }
 CppTypeFor<TypeCategory::Real, 8> RTNAME(Norm2_8)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Real, 8>(
-      x, source, line, dim, mask, Norm2Accumulator<8>{x}, "NORM2");
+  return GetTotalReduction<TypeCategory::Real, 8>(x, source, line,
+      /*hasDim=*/true, dim, mask, Norm2Accumulator<8>{x}, "NORM2");
 }
 #if LONG_DOUBLE == 80
 CppTypeFor<TypeCategory::Real, 10> RTNAME(Norm2_10)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Real, 10>(
-      x, source, line, dim, mask, Norm2Accumulator<10>{x}, "NORM2");
+  return GetTotalReduction<TypeCategory::Real, 10>(x, source, line,
+      /*hasDim=*/true, dim, mask, Norm2Accumulator<10>{x}, "NORM2");
 }
 #elif LONG_DOUBLE == 128
 CppTypeFor<TypeCategory::Real, 16> RTNAME(Norm2_16)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Real, 16>(
-      x, source, line, dim, mask, Norm2Accumulator<16>{x}, "NORM2");
+  return GetTotalReduction<TypeCategory::Real, 16>(x, source, line,
+      /*hasDim=*/true, dim, mask, Norm2Accumulator<16>{x}, "NORM2");
 }
 #endif
 

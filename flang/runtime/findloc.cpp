@@ -133,7 +133,8 @@ struct TotalNumericFindlocHelper {
       using Eq = Equality<XCAT, XKIND, TARGET_CAT, TARGET_KIND>;
       using Accumulator = LocationAccumulator<Eq>;
       Accumulator accumulator{x, target, back};
-      DoTotalReduction<void>(x, dim, mask, accumulator, "FINDLOC", terminator);
+      DoTotalReduction<void>(
+          x, /*hasDim=*/true, dim, mask, accumulator, "FINDLOC", terminator);
       ApplyIntegerKind<LocationResultHelper<Accumulator>::template Functor,
           void>(kind, terminator, accumulator, result);
     }
@@ -182,7 +183,8 @@ template <int KIND> struct CharacterFindlocHelper {
       Terminator &terminator) {
     using Accumulator = LocationAccumulator<CharacterEquality<KIND>>;
     Accumulator accumulator{x, target, back};
-    DoTotalReduction<void>(x, 0, mask, accumulator, "FINDLOC", terminator);
+    DoTotalReduction<void>(x, /*hasDim=*/false, /*dim=*/1, mask, accumulator,
+        "FINDLOC", terminator);
     ApplyIntegerKind<LocationResultHelper<Accumulator>::template Functor, void>(
         kind, terminator, accumulator, result);
   }
@@ -193,7 +195,8 @@ static void LogicalFindlocHelper(Descriptor &result, const Descriptor &x,
     Terminator &terminator) {
   using Accumulator = LocationAccumulator<LogicalEquivalence>;
   Accumulator accumulator{x, target, back};
-  DoTotalReduction<void>(x, 0, mask, accumulator, "FINDLOC", terminator);
+  DoTotalReduction<void>(
+      x, /*hasDim=*/false, /*dim=*/1, mask, accumulator, "FINDLOC", terminator);
   ApplyIntegerKind<LocationResultHelper<Accumulator>::template Functor, void>(
       kind, terminator, accumulator, result);
 }
@@ -221,19 +224,19 @@ void RTNAME(Findloc)(Descriptor &result, const Descriptor &x,
     ApplyIntegerKind<NumericFindlocHelper<TypeCategory::Integer,
                          TotalNumericFindlocHelper>::template Functor,
         void>(xType->second, terminator, targetType->first, targetType->second,
-        result, x, target, kind, 0, mask, back, terminator);
+        result, x, target, kind, /*dim=*/1, mask, back, terminator);
     break;
   case TypeCategory::Real:
     ApplyFloatingPointKind<NumericFindlocHelper<TypeCategory::Real,
                                TotalNumericFindlocHelper>::template Functor,
         void>(xType->second, terminator, targetType->first, targetType->second,
-        result, x, target, kind, 0, mask, back, terminator);
+        result, x, target, kind, /*dim=*/1, mask, back, terminator);
     break;
   case TypeCategory::Complex:
     ApplyFloatingPointKind<NumericFindlocHelper<TypeCategory::Complex,
                                TotalNumericFindlocHelper>::template Functor,
         void>(xType->second, terminator, targetType->first, targetType->second,
-        result, x, target, kind, 0, mask, back, terminator);
+        result, x, target, kind, /*dim=*/1, mask, back, terminator);
     break;
   case TypeCategory::Character:
     RUNTIME_CHECK(terminator,

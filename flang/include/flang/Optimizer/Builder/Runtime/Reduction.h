@@ -93,9 +93,10 @@ void genMinlocDim(fir::FirOpBuilder &builder, mlir::Location loc,
                   mlir::Value maskBox, mlir::Value kind, mlir::Value back);
 
 /// Generate call to `Maxval` intrinsic runtime routine. This is the version
-/// that does not take a dim argument.
+/// that returns a scalar.
 mlir::Value genMaxval(fir::FirOpBuilder &builder, mlir::Location loc,
-                      mlir::Value arrayBox, mlir::Value maskBox);
+                      mlir::Value arrayBox, bool absentDim, mlir::Value dim,
+                      mlir::Value maskBox);
 
 /// Generate call to `MaxvalCharacter` intrinsic runtime routine. This is the
 /// version hat that handles 1 dimensional character arrays  with no DIM
@@ -111,9 +112,10 @@ void genMaxvalDim(fir::FirOpBuilder &builder, mlir::Location loc,
                   mlir::Value maskBox);
 
 /// Generate call to `Minval` intrinsic runtime routine. This is the version
-/// that does not take a dim argument.
+/// that returns a scalar.
 mlir::Value genMinval(fir::FirOpBuilder &builder, mlir::Location loc,
-                      mlir::Value arrayBox, mlir::Value maskBox);
+                      mlir::Value arrayBox, bool absentDim,
+                      const mlir::Value dim, mlir::Value maskBox);
 
 /// Generate call to `MinvalCharacter` intrinsic runtime routine. This is the
 /// version that that handles 1 dimensional character arrays with no DIM

@@ -56,28 +56,32 @@ extern "C" {
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(ProductInteger1)(
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Integer, 1>(x, source, line, dim, mask,
+  return GetTotalReduction<TypeCategory::Integer, 1>(x, source, line,
+      /*hasDim=*/true, dim, mask,
       NonComplexProductAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x},
       "PRODUCT");
 }
 CppTypeFor<TypeCategory::Integer, 2> RTNAME(ProductInteger2)(
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Integer, 2>(x, source, line, dim, mask,
+  return GetTotalReduction<TypeCategory::Integer, 2>(x, source, line,
+      /*hasDim=*/true, dim, mask,
       NonComplexProductAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x},
       "PRODUCT");
 }
 CppTypeFor<TypeCategory::Integer, 4> RTNAME(ProductInteger4)(
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Integer, 4>(x, source, line, dim, mask,
+  return GetTotalReduction<TypeCategory::Integer, 4>(x, source, line,
+      /*hasDim=*/true, dim, mask,
       NonComplexProductAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x},
       "PRODUCT");
 }
 CppTypeFor<TypeCategory::Integer, 8> RTNAME(ProductInteger8)(
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Integer, 8>(x, source, line, dim, mask,
+  return GetTotalReduction<TypeCategory::Integer, 8>(x, source, line,
+      /*hasDim=*/true, dim, mask,
       NonComplexProductAccumulator<CppTypeFor<TypeCategory::Integer, 8>>{x},
       "PRODUCT");
 }
@@ -85,8 +89,8 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(ProductInteger8)(
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(ProductInteger16)(
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Integer, 16>(x, source, line, dim,
-      mask,
+  return GetTotalReduction<TypeCategory::Integer, 16>(x, source, line,
+      /*hasDim=*/true, dim, mask,
       NonComplexProductAccumulator<CppTypeFor<TypeCategory::Integer, 16>>{x},
       "PRODUCT");
 }
@@ -95,27 +99,31 @@ CppTypeFor<TypeCategory::Integer, 16> RTNAME(ProductInteger16)(
 // TODO: real/complex(2 & 3)
 CppTypeFor<TypeCategory::Real, 4> RTNAME(ProductReal4)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Real, 4>(x, source, line, dim, mask,
+  return GetTotalReduction<TypeCategory::Real, 4>(x, source, line,
+      /*hasDim=*/true, dim, mask,
       NonComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 8>>{x},
       "PRODUCT");
 }
 CppTypeFor<TypeCategory::Real, 8> RTNAME(ProductReal8)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Real, 8>(x, source, line, dim, mask,
+  return GetTotalReduction<TypeCategory::Real, 8>(x, source, line,
+      /*hasDim=*/true, dim, mask,
       NonComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 8>>{x},
       "PRODUCT");
 }
 #if LONG_DOUBLE == 80
 CppTypeFor<TypeCategory::Real, 10> RTNAME(ProductReal10)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Real, 10>(x, source, line, dim, mask,
+  return GetTotalReduction<TypeCategory::Real, 10>(x, source, line,
+      /*hasDim=*/true, dim, mask,
       NonComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 10>>{x},
       "PRODUCT");
 }
 #elif LONG_DOUBLE == 128
 CppTypeFor<TypeCategory::Real, 16> RTNAME(ProductReal16)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Real, 16>(x, source, line, dim, mask,
+  return GetTotalReduction<TypeCategory::Real, 16>(x, source, line,
+      /*hasDim=*/true, dim, mask,
       NonComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 16>>{x},
       "PRODUCT");
 }
@@ -124,31 +132,35 @@ CppTypeFor<TypeCategory::Real, 16> RTNAME(ProductReal16)(const Descriptor &x,
 void RTNAME(CppProductComplex4)(CppTypeFor<TypeCategory::Complex, 4> &result,
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
-  result = GetTotalReduction<TypeCategory::Complex, 4>(x, source, line, dim,
-      mask, ComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 8>>{x},
+  result = GetTotalReduction<TypeCategory::Complex, 4>(x, source, line,
+      /*hasDim=*/true, dim, mask,
+      ComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 8>>{x},
       "PRODUCT");
 }
 void RTNAME(CppProductComplex8)(CppTypeFor<TypeCategory::Complex, 8> &result,
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
-  result = GetTotalReduction<TypeCategory::Complex, 8>(x, source, line, dim,
-      mask, ComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 8>>{x},
+  result = GetTotalReduction<TypeCategory::Complex, 8>(x, source, line,
+      /*hasDim=*/true, dim, mask,
+      ComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 8>>{x},
       "PRODUCT");
 }
 #if LONG_DOUBLE == 80
 void RTNAME(CppProductComplex10)(CppTypeFor<TypeCategory::Complex, 10> &result,
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
-  result = GetTotalReduction<TypeCategory::Complex, 10>(x, source, line, dim,
-      mask, ComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 10>>{x},
+  result = GetTotalReduction<TypeCategory::Complex, 10>(x, source, line,
+      /*hasDim=*/true, dim, mask,
+      ComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 10>>{x},
       "PRODUCT");
 }
 #elif LONG_DOUBLE == 128
 void RTNAME(CppProductComplex16)(CppTypeFor<TypeCategory::Complex, 16> &result,
     const Descriptor &x, const char *source, int line, int dim,
     const Descriptor *mask) {
-  result = GetTotalReduction<TypeCategory::Complex, 16>(x, source, line, dim,
-      mask, ComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 16>>{x},
+  result = GetTotalReduction<TypeCategory::Complex, 16>(x, source, line,
+      /*hasDim=*/true, dim, mask,
+      ComplexProductAccumulator<CppTypeFor<TypeCategory::Real, 16>>{x},
       "PRODUCT");
 }
 #endif

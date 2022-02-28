@@ -268,8 +268,11 @@ genExtremumVal(FN func, FD funcDim, FC funcChar, mlir::Type resultType,
 
   // For Maxval/MinVal, we call the type specific versions of
   // Maxval/Minval because the result is scalar in the case below.
+  mlir::Value dim =
+      absentDim ? builder.createIntegerConstant(loc, builder.getIndexType(), 0)
+                : fir::getBase(args[1]);
   if (!hasCharacterResult && (absentDim || rank == 1))
-    return func(builder, loc, array, mask);
+    return func(builder, loc, array, absentDim, dim, mask);
 
   if (hasCharacterResult && (absentDim || rank == 1)) {
     // Create mutable fir.box to be passed to the runtime for the result.

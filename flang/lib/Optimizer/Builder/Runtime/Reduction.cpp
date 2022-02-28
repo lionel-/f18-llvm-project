@@ -76,8 +76,9 @@ struct ForcedMinvalReal10 {
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
       auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
-      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy, intTy, boxTy},
-                                     {ty});
+      auto boolTy = mlir::IntegerType::get(ctx, 1);
+      return mlir::FunctionType::get(
+          ctx, {boxTy, strTy, intTy, boolTy, intTy, boxTy}, {ty});
     };
   }
 };
@@ -92,8 +93,9 @@ struct ForcedMinvalReal16 {
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
       auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
-      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy, intTy, boxTy},
-                                     {ty});
+      auto boolTy = mlir::IntegerType::get(ctx, 1);
+      return mlir::FunctionType::get(
+          ctx, {boxTy, strTy, intTy, boolTy, intTy, boxTy}, {ty});
     };
   }
 };
@@ -109,8 +111,9 @@ struct ForcedMinvalInteger16 {
           fir::runtime::getModel<const Fortran::runtime::Descriptor &>()(ctx);
       auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
       auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
-      return mlir::FunctionType::get(ctx, {boxTy, strTy, intTy, intTy, boxTy},
-                                     {ty});
+      auto boolTy = mlir::IntegerType::get(ctx, 1);
+      return mlir::FunctionType::get(
+          ctx, {boxTy, strTy, intTy, boolTy, intTy, boxTy}, {ty});
     };
   }
 };
@@ -535,15 +538,15 @@ void fir::runtime::genMaxlocDim(fir::FirOpBuilder &builder, mlir::Location loc,
 }
 
 /// Generate call to `Maxval` intrinsic runtime routine. This is the version
-/// that does not take a dim argument.
+/// that returns a scalar
 mlir::Value fir::runtime::genMaxval(fir::FirOpBuilder &builder,
                                     mlir::Location loc, mlir::Value arrayBox,
+                                    bool absentDim, mlir::Value dim,
                                     mlir::Value maskBox) {
   mlir::FuncOp func;
   auto ty = arrayBox.getType();
   auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
   auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
-  auto dim = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
 
   if (eleTy.isF32())
     func = fir::runtime::getRuntimeFunc<mkRTKey(MaxvalReal4)>(loc, builder);
@@ -654,15 +657,18 @@ void fir::runtime::genMinvalChar(fir::FirOpBuilder &builder, mlir::Location loc,
 }
 
 /// Generate call to `Minval` intrinsic runtime routine. This is the version
-/// that does not take a dim argument.
+/// that returns a scalar.  This happens when either the DIM argument is
+/// missing or when the ARRAY argument has rank 1
 mlir::Value fir::runtime::genMinval(fir::FirOpBuilder &builder,
                                     mlir::Location loc, mlir::Value arrayBox,
+                                    bool absentDim, const mlir::Value dim,
                                     mlir::Value maskBox) {
   mlir::FuncOp func;
   auto ty = arrayBox.getType();
   auto arrTy = fir::dyn_cast_ptrOrBoxEleTy(ty);
   auto eleTy = arrTy.cast<fir::SequenceType>().getEleTy();
-  auto dim = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
+  auto hasDim = absentDim ? builder.createBool(loc, false)
+                          : builder.createBool(loc, true);
 
   if (eleTy.isF32())
     func = fir::runtime::getRuntimeFunc<mkRTKey(MinvalReal4)>(loc, builder);
@@ -694,8 +700,9 @@ mlir::Value fir::runtime::genMinval(fir::FirOpBuilder &builder,
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto sourceLine =
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
-  auto args = fir::runtime::createArguments(
-      builder, loc, fTy, arrayBox, sourceFile, sourceLine, dim, maskBox);
+  auto args =
+      fir::runtime::createArguments(builder, loc, fTy, arrayBox, sourceFile,
+                                    sourceLine, hasDim, dim, maskBox);
 
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }

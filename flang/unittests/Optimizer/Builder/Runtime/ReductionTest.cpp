@@ -70,7 +70,8 @@ void testGenMaxVal(
   mlir::Type refSeqTy = fir::ReferenceType::get(seqTy);
   mlir::Value undef = builder.create<fir::UndefOp>(loc, refSeqTy);
   mlir::Value mask = builder.create<fir::UndefOp>(loc, seqTy);
-  mlir::Value max = fir::runtime::genMaxval(builder, loc, undef, mask);
+  mlir::Value max = fir::runtime::genMaxval(builder, loc, undef, false, undef, 
+      mask);
   checkCallOp(max.getDefiningOp(), fctName, 3);
 }
 
@@ -89,27 +90,63 @@ TEST_F(RuntimeCallTest, genMaxValTest) {
 
 void testGenMinVal(
     fir::FirOpBuilder &builder, mlir::Type eleTy, llvm::StringRef fctName) {
+  FILE *file;
+  file = fopen("/home/psteinfeld/log", "a");
+  fprintf(file, "In testGenMinVal\n");
+  fclose(file);
   mlir::Location loc = builder.getUnknownLoc();
   mlir::Type seqTy =
       fir::SequenceType::get(fir::SequenceType::Shape(1, 10), eleTy);
   mlir::Type refSeqTy = fir::ReferenceType::get(seqTy);
   mlir::Value undef = builder.create<fir::UndefOp>(loc, refSeqTy);
   mlir::Value mask = builder.create<fir::UndefOp>(loc, seqTy);
-  mlir::Value min = fir::runtime::genMinval(builder, loc, undef, mask);
-  checkCallOp(min.getDefiningOp(), fctName, 3);
+  mlir::Value min = fir::runtime::genMinval(builder, loc, undef, false, undef,
+      mask);
+  checkCallOp(min.getDefiningOp(), fctName, 4);
 }
 
 TEST_F(RuntimeCallTest, genMinValTest) {
+  FILE *file;
+  file = fopen("/home/psteinfeld/log", "a");
+  fprintf(file, "In genMinValTest\n");
+  fclose(file);
   testGenMinVal(*firBuilder, f32Ty, "_FortranAMinvalReal4");
+  file = fopen("/home/psteinfeld/log", "a");
+  fprintf(file, "In genMinValTest 1\n");
+  fclose(file);
   testGenMinVal(*firBuilder, f64Ty, "_FortranAMinvalReal8");
+  file = fopen("/home/psteinfeld/log", "a");
+  fprintf(file, "In genMinValTest 2\n");
+  fclose(file);
   testGenMinVal(*firBuilder, f80Ty, "_FortranAMinvalReal10");
-  testGenMinVal(*firBuilder, f128Ty, "_FortranAMinvalReal16");
+  file = fopen("/home/psteinfeld/log", "a");
+  fprintf(file, "In genMinValTest 3\n");
+  fclose(file);
+//  testGenMinVal(*firBuilder, f128Ty, "_FortranAMinvalReal16");
+//  file = fopen("/home/psteinfeld/log", "a");
+//  fprintf(file, "In genMinValTest 4\n");
+//  fclose(file);
 
   testGenMinVal(*firBuilder, i8Ty, "_FortranAMinvalInteger1");
+  file = fopen("/home/psteinfeld/log", "a");
+  fprintf(file, "In genMinValTest 5\n");
+  fclose(file);
   testGenMinVal(*firBuilder, i16Ty, "_FortranAMinvalInteger2");
+  file = fopen("/home/psteinfeld/log", "a");
+  fprintf(file, "In genMinValTest 6\n");
+  fclose(file);
   testGenMinVal(*firBuilder, i32Ty, "_FortranAMinvalInteger4");
+  file = fopen("/home/psteinfeld/log", "a");
+  fprintf(file, "In genMinValTest 7\n");
+  fclose(file);
   testGenMinVal(*firBuilder, i64Ty, "_FortranAMinvalInteger8");
-  testGenMinVal(*firBuilder, i128Ty, "_FortranAMinvalInteger16");
+  file = fopen("/home/psteinfeld/log", "a");
+  fprintf(file, "In genMinValTest 8\n");
+  fclose(file);
+//  testGenMinVal(*firBuilder, i128Ty, "_FortranAMinvalInteger16");
+//  file = fopen("/home/psteinfeld/log", "a");
+//  fprintf(file, "In genMinValTest 9\n");
+//  fclose(file);
 }
 
 void testGenSum(

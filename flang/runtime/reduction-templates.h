@@ -40,12 +40,12 @@ namespace Fortran::runtime {
 // cases of FINDLOC, MAXLOC, & MINLOC).  These are the cases without DIM= or
 // cases where the argument has rank 1 and DIM=, if present, must be 1.
 template <typename TYPE, typename ACCUMULATOR>
-inline void DoTotalReduction(const Descriptor &x, int dim,
+inline void DoTotalReduction(const Descriptor &x, bool hasDim, int dim,
     const Descriptor *mask, ACCUMULATOR &accumulator, const char *intrinsic,
     Terminator &terminator) {
-  if (dim < 0 || dim > 1) {
-    terminator.Crash(
-        "%s: bad DIM=%d for argument with rank %d", intrinsic, dim, x.rank());
+  if (hasDim && dim != 1) {
+    terminator.Crash("%s: invalid DIM=%d for ARRAY argument with rank %d",
+        intrinsic, dim, x.rank());
   }
   SubscriptValue xAt[maxRank];
   x.GetLowerBounds(xAt);
@@ -76,12 +76,13 @@ inline void DoTotalReduction(const Descriptor &x, int dim,
 
 template <TypeCategory CAT, int KIND, typename ACCUMULATOR>
 inline CppTypeFor<CAT, KIND> GetTotalReduction(const Descriptor &x,
-    const char *source, int line, int dim, const Descriptor *mask,
+    const char *source, int line, bool hasDim, int dim, const Descriptor *mask,
     ACCUMULATOR &&accumulator, const char *intrinsic) {
   Terminator terminator{source, line};
   RUNTIME_CHECK(terminator, TypeCode(CAT, KIND) == x.type());
   using CppType = CppTypeFor<CAT, KIND>;
-  DoTotalReduction<CppType>(x, dim, mask, accumulator, intrinsic, terminator);
+  DoTotalReduction<CppType>(
+      x, hasDim, dim, mask, accumulator, intrinsic, terminator);
   CppType result;
 #ifdef _MSC_VER // work around MSVC spurious error
   accumulator.GetResult(&result);
@@ -160,13 +161,16 @@ inline void ReduceDimMaskToScalar(const Descriptor &x, int zeroBasedDim,
 }
 
 // Utility: establishes & allocates the result array for a partial
-// reduction (i.e., one with DIM=).
+// reduction (i.e., one with DIM=).  This handles intrinsics where the array
+// argument has rank > 1.
 static void CreatePartialReductionResult(Descriptor &result,
     const Descriptor &x, int dim, Terminator &terminator, const char *intrinsic,
     TypeCode typeCode) {
   int xRank{x.rank()};
   if (dim < 1 || dim > xRank) {
-    terminator.Crash("%s: bad DIM=%d for rank %d", intrinsic, dim, xRank);
+    terminator.Crash(
+        "In intrinsic %s: invalid DIM=%d, must be between 1 and %d", intrinsic,
+        dim, xRank);
   }
   int zeroBasedDim{dim - 1};
   SubscriptValue resultExtent[maxRank];

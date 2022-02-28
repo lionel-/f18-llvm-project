@@ -5,12 +5,14 @@
 integer function minval_test(a)
   integer :: a(:)
 ! CHECK-DAG:  %[[c0:.*]] = arith.constant 0 : index
-! CHECK-DAG:  %[[a2:.*]] = fir.absent !fir.box<i1>
-! CHECK-DAG:  %[[a4:.*]] = fir.convert %[[arg0]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
-! CHECK:  %[[a6:.*]] = fir.convert %[[c0]] : (index) -> i32
-! CHECK:  %[[a7:.*]] = fir.convert %[[a2]] : (!fir.box<i1>) -> !fir.box<none>
+! CHECK-DAG:  %[[a1:.*]] = fir.absent !fir.box<i1>
+! CHECK:  %[[a2:.*]] = fir.address_of(
+! CHECK-DAG:  %[[a3:.*]] = fir.convert %[[arg0]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
+! CHECK:  %[[a4:.*]] = fir.convert %[[a2]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
+! CHECK:  %[[a5:.*]] = fir.convert %[[c0]] : (index) -> i32
+! CHECK:  %[[a6:.*]] = fir.convert %[[a1]] : (!fir.box<i1>) -> !fir.box<none>
   minval_test = minval(a)
-! CHECK:  %{{.*}} = fir.call @_FortranAMinvalInteger4(%[[a4]], %{{.*}}, %{{.*}}, %[[a6]], %[[a7]]) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
+! CHECK:  %{{.*}} = fir.call @_FortranAMinvalInteger4(%[[a3]], %{{.*}}, %{{.*}}, %{{.*}},  %[[a5]], %[[a6]]) : (!fir.box<none>, !fir.ref<i8>, i32, i1, i32, !fir.box<none>) -> i32
 end function
 
 ! CHECK-LABEL: func @_QPminval_test2(
@@ -55,7 +57,7 @@ subroutine test_minval_optional_scalar_mask(mask, array)
 ! CHECK:  %[[VAL_9:.*]] = fir.absent !fir.box<!fir.logical<4>>
 ! CHECK:  %[[VAL_10:.*]] = select %[[VAL_7]], %[[VAL_8]], %[[VAL_9]] : !fir.box<!fir.logical<4>>
 ! CHECK:  %[[VAL_17:.*]] = fir.convert %[[VAL_10]] : (!fir.box<!fir.logical<4>>) -> !fir.box<none>
-! CHECK: fir.call @_FortranAMinvalInteger4(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_17]]) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
+! CHECK: fir.call @_FortranAMinvalInteger4(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_17]]) : (!fir.box<none>, !fir.ref<i8>, i32, i1, i32, !fir.box<none>) -> i32
 end subroutine
 
 ! CHECK-LABEL: func @_QPtest_minval_optional_array_mask(
@@ -64,6 +66,6 @@ subroutine test_minval_optional_array_mask(mask, array)
   integer :: array(:)
   logical, optional :: mask(:)
   print *, minval(array, mask)
-! CHECK:  %[[VAL_13:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.box<none>
-! CHECK: fir.call @_FortranAMinvalInteger4(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_13]]) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
+! CHECK:  %[[VAL_8:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.box<none>
+! CHECK: fir.call @_FortranAMinvalInteger4(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_8]]) : (!fir.box<none>, !fir.ref<i8>, i32, i1, i32, !fir.box<none>) -> i32
 end subroutine

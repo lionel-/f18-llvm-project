@@ -76,30 +76,34 @@ private:
 extern "C" {
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(IAll1)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Integer, 1>(x, source, line, dim, mask,
+  return GetTotalReduction<TypeCategory::Integer, 1>(x, source, line,
+      /*hasDim=*/true, dim, mask,
       IntegerAndAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x}, "IALL");
 }
 CppTypeFor<TypeCategory::Integer, 2> RTNAME(IAll2)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Integer, 2>(x, source, line, dim, mask,
+  return GetTotalReduction<TypeCategory::Integer, 2>(x, source, line,
+      /*hasDim=*/true, dim, mask,
       IntegerAndAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x}, "IALL");
 }
 CppTypeFor<TypeCategory::Integer, 4> RTNAME(IAll4)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Integer, 4>(x, source, line, dim, mask,
+  return GetTotalReduction<TypeCategory::Integer, 4>(x, source, line,
+      /*hasDim=*/true, dim, mask,
       IntegerAndAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x}, "IALL");
 }
 CppTypeFor<TypeCategory::Integer, 8> RTNAME(IAll8)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Integer, 8>(x, source, line, dim, mask,
+  return GetTotalReduction<TypeCategory::Integer, 8>(x, source, line,
+      /*hasDim=*/true, dim, mask,
       IntegerAndAccumulator<CppTypeFor<TypeCategory::Integer, 8>>{x}, "IALL");
 }
 #ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(IAll16)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Integer, 16>(x, source, line, dim,
-      mask, IntegerAndAccumulator<CppTypeFor<TypeCategory::Integer, 16>>{x},
-      "IALL");
+  return GetTotalReduction<TypeCategory::Integer, 16>(x, source, line,
+      /*hasDim=*/true, dim, mask,
+      IntegerAndAccumulator<CppTypeFor<TypeCategory::Integer, 16>>{x}, "IALL");
 }
 #endif
 void RTNAME(IAllDim)(Descriptor &result, const Descriptor &x, int dim,
@@ -114,30 +118,34 @@ void RTNAME(IAllDim)(Descriptor &result, const Descriptor &x, int dim,
 
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(IAny1)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Integer, 1>(x, source, line, dim, mask,
+  return GetTotalReduction<TypeCategory::Integer, 1>(x, source, line,
+      /*hasDim=*/true, dim, mask,
       IntegerOrAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x}, "IANY");
 }
 CppTypeFor<TypeCategory::Integer, 2> RTNAME(IAny2)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Integer, 2>(x, source, line, dim, mask,
+  return GetTotalReduction<TypeCategory::Integer, 2>(x, source, line,
+      /*hasDim=*/true, dim, mask,
       IntegerOrAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x}, "IANY");
 }
 CppTypeFor<TypeCategory::Integer, 4> RTNAME(IAny4)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Integer, 4>(x, source, line, dim, mask,
+  return GetTotalReduction<TypeCategory::Integer, 4>(x, source, line,
+      /*hasDim=*/true, dim, mask,
       IntegerOrAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x}, "IANY");
 }
 CppTypeFor<TypeCategory::Integer, 8> RTNAME(IAny8)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Integer, 8>(x, source, line, dim, mask,
+  return GetTotalReduction<TypeCategory::Integer, 8>(x, source, line,
+      /*hasDim=*/true, dim, mask,
       IntegerOrAccumulator<CppTypeFor<TypeCategory::Integer, 8>>{x}, "IANY");
 }
 #ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(IAny16)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Integer, 16>(x, source, line, dim,
-      mask, IntegerOrAccumulator<CppTypeFor<TypeCategory::Integer, 16>>{x},
-      "IANY");
+  return GetTotalReduction<TypeCategory::Integer, 16>(x, source, line,
+      /*hasDim=*/true, dim, mask,
+      IntegerOrAccumulator<CppTypeFor<TypeCategory::Integer, 16>>{x}, "IANY");
 }
 #endif
 void RTNAME(IAnyDim)(Descriptor &result, const Descriptor &x, int dim,
@@ -152,33 +160,38 @@ void RTNAME(IAnyDim)(Descriptor &result, const Descriptor &x, int dim,
 
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(IParity1)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Integer, 1>(x, source, line, dim, mask,
+  return GetTotalReduction<TypeCategory::Integer, 1>(x, source, line,
+      /*hasDim=*/true, dim, mask,
       IntegerXorAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x},
       "IPARITY");
 }
 CppTypeFor<TypeCategory::Integer, 2> RTNAME(IParity2)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Integer, 2>(x, source, line, dim, mask,
+  return GetTotalReduction<TypeCategory::Integer, 2>(x, source, line,
+      /*hasDim=*/true, dim, mask,
       IntegerXorAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x},
       "IPARITY");
 }
 CppTypeFor<TypeCategory::Integer, 4> RTNAME(IParity4)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Integer, 4>(x, source, line, dim, mask,
+  return GetTotalReduction<TypeCategory::Integer, 4>(x, source, line,
+      /*hasDim=*/true, dim, mask,
       IntegerXorAccumulator<CppTypeFor<TypeCategory::Integer, 4>>{x},
       "IPARITY");
 }
 CppTypeFor<TypeCategory::Integer, 8> RTNAME(IParity8)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Integer, 8>(x, source, line, dim, mask,
+  return GetTotalReduction<TypeCategory::Integer, 8>(x, source, line,
+      /*hasDim=*/true, dim, mask,
       IntegerXorAccumulator<CppTypeFor<TypeCategory::Integer, 8>>{x},
       "IPARITY");
 }
 #ifdef __SIZEOF_INT128__
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(IParity16)(const Descriptor &x,
     const char *source, int line, int dim, const Descriptor *mask) {
-  return GetTotalReduction<TypeCategory::Integer, 16>(x, source, line, dim,
-      mask, IntegerXorAccumulator<CppTypeFor<TypeCategory::Integer, 16>>{x},
+  return GetTotalReduction<TypeCategory::Integer, 16>(x, source, line,
+      /*hasDim=*/true, dim, mask,
+      IntegerXorAccumulator<CppTypeFor<TypeCategory::Integer, 16>>{x},
       "IPARITY");
 }
 #endif
@@ -222,13 +235,15 @@ private:
   bool result_{REDUCTION == LogicalReduction::All};
 };
 
+// This version is for when the MASK argument has rank 1
 template <typename ACCUMULATOR>
 inline auto GetTotalLogicalReduction(const Descriptor &x, const char *source,
     int line, int dim, ACCUMULATOR &&accumulator, const char *intrinsic) ->
     typename ACCUMULATOR::Type {
   Terminator terminator{source, line};
-  if (dim < 0 || dim > 1) {
-    terminator.Crash("%s: bad DIM=%d", intrinsic, dim);
+  if (dim != 1) {
+    terminator.Crash(
+        "In the intrinsic %s: invalid DIM=%d, must be 1", intrinsic, dim);
   }
   SubscriptValue xAt[maxRank];
   x.GetLowerBounds(xAt);
