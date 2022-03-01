@@ -107,6 +107,66 @@ struct IncrementLoopInfo {
   mlir::Block *exitBlock = nullptr;   // loop exit target block
 };
 
+/// Helper class to generate the runtime type info global data. This data
+/// is required to describe the derived type to the runtime so that it can
+/// operate over it. It must be ensured this data will be generated for every
+/// derived type lowered in the current translated unit. However, this data
+/// cannot be generated before FuncOp have been created for functions since the
+/// initializers may take their address (e.g for type bound procedures). This
+/// class allows registering all the required runtime type info while it is not
+/// possible to create globals, and to generate this data after function
+/// lowering.
+class RuntimeTypeInfoConverter {
+  /// Store the location and symbols of derived type info to be generated.
+  /// The location of the derived type instantiation is also stored because
+  /// runtime type descriptor symbol are compiler generated and cannot be mapped
+  /// to user code on their own.
+  struct TypeInfoSymbol {
+    Fortran::semantics::SymbolRef symbol;
+    mlir::Location loc;
+  };
+
+public:
+  void registerTypeInfoSymbol(Fortran::lower::AbstractConverter &converter,
+                              mlir::Location loc,
+                              Fortran::semantics::SymbolRef typeInfoSym) {
+    if (seen.contains(typeInfoSym))
+      return;
+    seen.insert(typeInfoSym);
+    if (!skipRegistration) {
+      registeredTypeInfoSymbols.emplace_back(TypeInfoSymbol{typeInfoSym, loc});
+      return;
+    }
+    // Once the registration is closed, symbols cannot be added to the
+    // registeredTypeInfoSymbols list because it may be iterated over.
+    // However, after registration is closed, it is safe to directly generate
+    // the globals because all FuncOps whose addresses may be required by the
+    // initializers have been generated.
+    Fortran::lower::createRuntimeTypeInfoGlobal(converter, loc,
+                                                typeInfoSym.get());
+  }
+
+  void createTypeInfoGlobals(Fortran::lower::AbstractConverter &converter) {
+    skipRegistration = true;
+    for (const TypeInfoSymbol &info : registeredTypeInfoSymbols)
+      Fortran::lower::createRuntimeTypeInfoGlobal(converter, info.loc,
+                                                  info.symbol.get());
+    registeredTypeInfoSymbols.clear();
+  }
+
+private:
+  /// Store the runtime type descriptors that will be required for the
+  /// derived type that have been converted to FIR derived types.
+  llvm::SmallVector<TypeInfoSymbol> registeredTypeInfoSymbols;
+  /// Create derived type runtime info global immediately without storing the
+  /// symbol in registeredTypeInfoSymbols.
+  bool skipRegistration = false;
+  /// Track symbols symbols processed during and after the registration
+  /// to avoid infinite loops between type conversions and global variable
+  /// creation.
+  llvm::SmallSetVector<Fortran::semantics::SymbolRef, 64> seen;
+};
+
 using IncrementLoopNestInfo = llvm::SmallVector<IncrementLoopInfo>;
 } // namespace
 
@@ -167,6 +227,12 @@ public:
           },
           u);
     }
+
+    /// Once all the code has been translated, create runtime type info
+    /// global data structure for the derived types that have been
+    /// processed.
+    createGlobalOutsideOfFunctionLowering(
+        [&]() { runtimeTypeInfoConverter.createTypeInfoGlobals(*this); });
   }
 
   /// Declare a function.
@@ -478,6 +544,12 @@ public:
   void bindHostAssocTuple(mlir::Value val) override final {
     assert(!hostAssocTuple && val);
     hostAssocTuple = val;
+  }
+
+  void registerRuntimeTypeInfo(
+      mlir::Location loc,
+      Fortran::lower::SymbolRef typeInfoSym) override final {
+    runtimeTypeInfoConverter.registerTypeInfoSymbol(*this, loc, typeInfoSym);
   }
 
 private:
@@ -2685,8 +2757,12 @@ private:
     localSymbols.clear();
   }
 
-  /// Instantiate the data from a BLOCK DATA unit.
-  void lowerBlockData(Fortran::lower::pft::BlockDataUnit &bdunit) {
+  /// Helper to generate GlobalOps when the builder is not positioned in any
+  /// region block. This is required because the FirOpBuilder assumes it is
+  /// always positioned inside a region block when creating globals, the easiest
+  /// way comply is to create a dummy function and to throw it afterwards.
+  void createGlobalOutsideOfFunctionLowering(
+      const std::function<void()> &createGlobals) {
     // FIXME: get rid of the bogus function context and instantiate the
     // globals directly into the module.
     MLIRContext *context = &getMLIRContext();
@@ -2696,20 +2772,25 @@ private:
         mlir::FunctionType::get(context, llvm::None, llvm::None));
     func.addEntryBlock();
     builder = new fir::FirOpBuilder(func, bridge.getKindMap());
-    Fortran::lower::AggregateStoreMap fakeMap;
-    for (const auto &[_, sym] : bdunit.symTab) {
-      if (sym->has<Fortran::semantics::ObjectEntityDetails>()) {
-        Fortran::lower::pft::Variable var(*sym, true);
-        instantiateVar(var, fakeMap);
-      }
-    }
-
+    createGlobals();
     if (mlir::Region *region = func.getCallableRegion())
       region->dropAllReferences();
     func.erase();
     delete builder;
     builder = nullptr;
     localSymbols.clear();
+  }
+  /// Instantiate the data from a BLOCK DATA unit.
+  void lowerBlockData(Fortran::lower::pft::BlockDataUnit &bdunit) {
+    createGlobalOutsideOfFunctionLowering([&]() {
+      Fortran::lower::AggregateStoreMap fakeMap;
+      for (const auto &[_, sym] : bdunit.symTab) {
+        if (sym->has<Fortran::semantics::ObjectEntityDetails>()) {
+          Fortran::lower::pft::Variable var(*sym, true);
+          instantiateVar(var, fakeMap);
+        }
+      }
+    });
   }
 
   /// Lower a procedure (nest).
@@ -2739,30 +2820,18 @@ private:
   /// Lower module variable definitions to fir::globalOp and OpenMP/OpenACC
   /// declarative construct.
   void lowerModuleDeclScope(Fortran::lower::pft::ModuleLikeUnit &mod) {
-    // FIXME: get rid of the bogus function context and instantiate the
-    // globals directly into the module.
-    MLIRContext *context = &getMLIRContext();
     setCurrentPosition(mod.getStartingSourceLoc());
-    mlir::FuncOp func = fir::FirOpBuilder::createFunction(
-        mlir::UnknownLoc::get(context), getModuleOp(),
-        fir::NameUniquer::doGenerated("ModuleSham"),
-        mlir::FunctionType::get(context, llvm::None, llvm::None));
-    func.addEntryBlock();
-    builder = new fir::FirOpBuilder(func, bridge.getKindMap());
-    for (const Fortran::lower::pft::Variable &var :
-         mod.getOrderedSymbolTable()) {
-      // Only define the variables owned by this module.
-      const Fortran::semantics::Scope *owningScope = var.getOwningScope();
-      if (!owningScope || mod.getScope() == *owningScope)
-        Fortran::lower::defineModuleVariable(*this, var);
-    }
-    for (auto &eval : mod.evaluationList)
-      genFIR(eval);
-    if (mlir::Region *region = func.getCallableRegion())
-      region->dropAllReferences();
-    func.erase();
-    delete builder;
-    builder = nullptr;
+    createGlobalOutsideOfFunctionLowering([&]() {
+      for (const Fortran::lower::pft::Variable &var :
+           mod.getOrderedSymbolTable()) {
+        // Only define the variables owned by this module.
+        const Fortran::semantics::Scope *owningScope = var.getOwningScope();
+        if (!owningScope || mod.getScope() == *owningScope)
+          Fortran::lower::defineModuleVariable(*this, var);
+      }
+      for (auto &eval : mod.evaluationList)
+        genFIR(eval);
+    });
   }
 
   /// Lower functions contained in a module.
@@ -3010,6 +3079,8 @@ private:
         });
   }
 
+  void createRuntimeTypeInfoGlobals() {}
+
   //===--------------------------------------------------------------------===//
 
   Fortran::lower::LoweringBridge &bridge;
@@ -3018,6 +3089,7 @@ private:
   Fortran::lower::pft::Evaluation *evalPtr = nullptr;
   Fortran::lower::SymMap localSymbols;
   Fortran::parser::CharBlock currentPosition;
+  RuntimeTypeInfoConverter runtimeTypeInfoConverter;
 
   /// WHERE statement/construct mask expression stack.
   Fortran::lower::ImplicitIterSpace implicitIterSpace;

@@ -31,6 +31,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Optimizer/Support/FatalError.h"
+#include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/Support/Debug.h"
 
@@ -85,6 +86,23 @@ static bool isConstant(const Fortran::semantics::Symbol &sym) {
          sym.test(Fortran::semantics::Symbol::Flag::ReadOnly);
 }
 
+/// Is this a compiler generated symbol to describe derived types ?
+static bool isRuntimeTypeInfoData(const Fortran::semantics::Symbol &sym) {
+  // So far, use flags to detect if this symbol were generated during
+  // semantics::BuildRuntimeDerivedTypeTables(). Scope cannot be used since the
+  // symbols are injected in the user scopes defining the described derived
+  // types. A robustness improvement for this test could be to get hands on the
+  // semantics::RuntimeDerivedTypeTables and to check if the symbol names
+  // belongs to this structure.
+  return sym.test(Fortran::semantics::Symbol::Flag::CompilerCreated) &&
+         sym.test(Fortran::semantics::Symbol::Flag::ReadOnly);
+}
+
+static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
+                                  const Fortran::lower::pft::Variable &var,
+                                  llvm::StringRef globalName,
+                                  mlir::StringAttr linkage);
+
 /// Create the global op declaration without any initializer
 static fir::GlobalOp declareGlobal(Fortran::lower::AbstractConverter &converter,
                                    const Fortran::lower::pft::Variable &var,
@@ -93,6 +111,11 @@ static fir::GlobalOp declareGlobal(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   if (fir::GlobalOp global = builder.getNamedGlobal(globalName))
     return global;
+  // Always define linkonce data since it may be optimized out from the module
+  // that actually owns the variable if it does not refers to it.
+  if (linkage == builder.createLinkOnceODRLinkage() ||
+      linkage == builder.createLinkOnceLinkage())
+    return defineGlobal(converter, var, globalName, linkage);
   const Fortran::semantics::Symbol &sym = var.getSymbol();
   mlir::Location loc = converter.genLocation(sym.name());
   // Resolve potential host and module association before checking that this
@@ -451,6 +474,12 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
 static mlir::StringAttr
 getLinkageAttribute(fir::FirOpBuilder &builder,
                     const Fortran::lower::pft::Variable &var) {
+  // Runtime type info for a same derived type is identical in each compilation
+  // unit. It desired to avoid having to link against module that only define a
+  // type. Therefore the runtime type info is generated everywhere it is needed
+  // with `linkonce_odr` LLVM linkage.
+  if (var.hasSymbol() && isRuntimeTypeInfoData(var.getSymbol()))
+    return builder.createLinkOnceODRLinkage();
   if (var.isModuleVariable())
     return {}; // external linkage
   // Otherwise, the variable is owned by a procedure and must not be visible in
@@ -1706,7 +1735,8 @@ void Fortran::lower::defineModuleVariable(
     AbstractConverter &converter, const Fortran::lower::pft::Variable &var) {
   // Use empty linkage for module variables, which makes them available
   // for use in another unit.
-  mlir::StringAttr externalLinkage;
+  mlir::StringAttr linkage =
+      getLinkageAttribute(converter.getFirOpBuilder(), var);
   if (!var.isGlobal())
     fir::emitFatalError(converter.getCurrentLocation(),
                         "attempting to lower module variable as local");
@@ -1715,7 +1745,7 @@ void Fortran::lower::defineModuleVariable(
     const Fortran::lower::pft::Variable::AggregateStore &aggregate =
         var.getAggregateStore();
     std::string aggName = mangleGlobalAggregateStore(aggregate);
-    defineGlobalAggregateStore(converter, aggregate, aggName, externalLinkage);
+    defineGlobalAggregateStore(converter, aggregate, aggName, linkage);
     return;
   }
   const Fortran::semantics::Symbol &sym = var.getSymbol();
@@ -1727,7 +1757,7 @@ void Fortran::lower::defineModuleVariable(
     // Do nothing. Mapping will be done on user side.
   } else {
     std::string globalName = Fortran::lower::mangle::mangleName(sym);
-    defineGlobal(converter, var, globalName, externalLinkage);
+    defineGlobal(converter, var, globalName, linkage);
   }
 }
 
@@ -1796,4 +1826,14 @@ void Fortran::lower::mapCallInterfaceSymbols(
       instantiateVariable(converter, var, symMap, storeMap);
     }
   }
+}
+
+void Fortran::lower::createRuntimeTypeInfoGlobal(
+    Fortran::lower::AbstractConverter &converter, mlir::Location loc,
+    const Fortran::semantics::Symbol &typeInfoSym) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  std::string globalName = Fortran::lower::mangle::mangleName(typeInfoSym);
+  auto var = Fortran::lower::pft::Variable(typeInfoSym, /*global=*/true);
+  mlir::StringAttr linkage = getLinkageAttribute(builder, var);
+  defineGlobal(converter, var, globalName, linkage);
 }
