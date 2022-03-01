@@ -1,18 +1,12 @@
+// Test mapping between fir types and their runtime type descriptor objects.
 // RUN: tco -o - %s | FileCheck %s
 
-!type_defined_elsewhere = type !fir.type<_QMsome_moduleTtype_defined_elsewhere{j:i32}>
-fir.global internal @_QFfooEx2 : !fir.box<!fir.heap<!type_defined_elsewhere>> {
-  %0 = fir.zero_bits !fir.heap<!type_defined_elsewhere>
-  %1 = fir.embox %0 : (!fir.heap<!type_defined_elsewhere>) -> !fir.box<!fir.heap<!type_defined_elsewhere>>
-  fir.has_value %1 : !fir.box<!fir.heap<!type_defined_elsewhere>>
-}
-// CHECK: @_QMsome_moduleE.dt.type_defined_elsewhere = available_externally constant i8
-// CHECK: @_QFfooEx2 = internal global { %_QMsome_moduleTtype_defined_elsewhere*, i64, i32, i8, i8, i8, i8, i8*, [1 x i64] }
-// CHECK-SAME: { %_QMsome_moduleTtype_defined_elsewhere* null, i64 ptrtoint (%_QMsome_moduleTtype_defined_elsewhere* getelementptr (%_QMsome_moduleTtype_defined_elsewhere, %_QMsome_moduleTtype_defined_elsewhere* null, i32 1) to i64),
-// CHECK-SAME: i32 20180515, i8 0, i8 42, i8 2, i8 1, i8* @_QMsome_moduleE.dt.type_defined_elsewhere, [1 x i64] undef }
+// Test mapping of derived type following the internal name ABI (i.e. that could come from an actual
+// compiled Fortran program).
 
 !sometype = type !fir.type<_QFfooTsometype{num:i32,values:!fir.box<!fir.ptr<!fir.array<?x?xf32>>>}>
 fir.global internal @_QFfooE.dt.sometype constant : i8
+
 fir.global internal @_QFfooEx : !fir.box<!fir.heap<!sometype>> {
   %0 = fir.zero_bits !fir.heap<!sometype>
   %1 = fir.embox %0 : (!fir.heap<!sometype>) -> !fir.box<!fir.heap<!sometype>>
@@ -21,3 +15,15 @@ fir.global internal @_QFfooEx : !fir.box<!fir.heap<!sometype>> {
 // CHECK: @_QFfooEx = internal global { %_QFfooTsometype*, i64, i32, i8, i8, i8, i8, i8*, [1 x i64] }
 // CHECK-SAME: { %_QFfooTsometype* null, i64 ptrtoint (%_QFfooTsometype* getelementptr (%_QFfooTsometype, %_QFfooTsometype* null, i32 1) to i64),
 // CHECK-SAME: i32 20180515, i8 0, i8 42, i8 2, i8 1, i8* @_QFfooE.dt.sometype, [1 x i64] undef }
+
+!some_pdt_type = type !fir.type<_QFfooTsome_pdt_typeK42K43{num:i32,values:!fir.box<!fir.ptr<!fir.array<?x?xf32>>>}>
+fir.global internal @_QFfooE.dt.some_pdt_type.42.43 constant : i8
+
+fir.global internal @_QFfooEx2 : !fir.box<!fir.heap<!some_pdt_type>> {
+  %0 = fir.zero_bits !fir.heap<!some_pdt_type>
+  %1 = fir.embox %0 : (!fir.heap<!some_pdt_type>) -> !fir.box<!fir.heap<!some_pdt_type>>
+  fir.has_value %1 : !fir.box<!fir.heap<!some_pdt_type>>
+}
+// CHECK: @_QFfooEx2 = internal global { %_QFfooTsome_pdt_typeK42K43*, i64, i32, i8, i8, i8, i8, i8*, [1 x i64] }
+// CHECK-SAME: { %_QFfooTsome_pdt_typeK42K43* null, i64 ptrtoint (%_QFfooTsome_pdt_typeK42K43* getelementptr (%_QFfooTsome_pdt_typeK42K43, %_QFfooTsome_pdt_typeK42K43* null, i32 1) to i64),
+// CHECK-SAME: i32 20180515, i8 0, i8 42, i8 2, i8 1, i8* @_QFfooE.dt.some_pdt_type.42.43, [1 x i64] undef }
