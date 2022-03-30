@@ -233,6 +233,13 @@ public:
       mlir::Value oper = std::get<1>(e.value());
       unsigned index = e.index();
       llvm::TypeSwitch<mlir::Type>(ty)
+          .template Case<IndexType>([&](IndexType indexTy) {
+            auto newTy = specifics->indexMemoryType(indexTy);
+            auto newOper = rewriter->create<mlir::arith::IndexCastOp>(loc, oper, newTy);
+
+            newInTys.push_back(newTy);
+            newOpers.push_back(newOper);
+          })
           .template Case<BoxCharType>([&](BoxCharType boxTy) {
             bool sret;
             if constexpr (std::is_same_v<std::decay_t<A>, fir::CallOp>) {
@@ -445,7 +452,8 @@ public:
     for (auto ty : func.getInputs())
       if (((ty.isa<BoxCharType>() || isCharacterProcedureTuple(ty)) &&
            !noCharacterConversion) ||
-          (isa_complex(ty) && !noComplexConversion)) {
+          (isa_complex(ty) && !noComplexConversion) ||
+          ty.isa<IndexType>()) {
         LLVM_DEBUG(llvm::dbgs() << "rewrite " << signature << " for target\n");
         return false;
       }
@@ -495,6 +503,9 @@ public:
       auto ty = e.value();
       unsigned index = e.index();
       llvm::TypeSwitch<mlir::Type>(ty)
+          .Case<IndexType>([&](IndexType indexTy) {
+            newInTys.push_back(specifics->indexMemoryType(indexTy));
+          })
           .Case<BoxCharType>([&](BoxCharType boxTy) {
             if (noCharacterConversion) {
               newInTys.push_back(boxTy);

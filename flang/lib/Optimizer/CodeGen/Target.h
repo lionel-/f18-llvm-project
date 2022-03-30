@@ -66,6 +66,8 @@ public:
   CodeGenSpecifics() = delete;
   virtual ~CodeGenSpecifics() {}
 
+  virtual mlir::Type indexMemoryType(mlir::Type eleTy) const = 0;
+
   /// Type presentation of a `complex<ele>` type value in memory.
   virtual mlir::Type complexMemoryType(mlir::Type eleTy) const = 0;
 
