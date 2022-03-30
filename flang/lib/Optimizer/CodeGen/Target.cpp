@@ -261,12 +261,14 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
   switch (trp.getArch()) {
   default:
     break;
+  case llvm::Triple::ArchType::wasm32:
   case llvm::Triple::ArchType::x86:
     switch (trp.getOS()) {
     default:
       break;
     case llvm::Triple::OSType::Linux:
     case llvm::Triple::OSType::Darwin:
+    case llvm::Triple::OSType::Emscripten:
       return std::make_unique<TargetI386>(ctx, std::move(trp),
                                           std::move(kindMap));
     }
