@@ -483,6 +483,7 @@ struct IntrinsicLibrary {
   mlir::Value genIbclr(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIbits(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIbset(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genHypot(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genIchar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIeor(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genIndex(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -742,6 +743,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"trim_name", asValue},
        {"errmsg", asAddr}}},
      /*isElemental=*/false},
+    {"hypot", &I::genHypot},
     {"iachar", &I::genIchar},
     {"iand", &I::genIand},
     {"ibclr", &I::genIbclr},
@@ -1850,7 +1852,7 @@ mlir::Value IntrinsicLibrary::genAbs(mlir::Type resultType,
     // Use HYPOT to fulfill the no underflow/overflow requirement.
     auto parts = fir::factory::Complex{builder, loc}.extractParts(arg);
     llvm::SmallVector<mlir::Value> args = {parts.first, parts.second};
-    return genRuntimeCall("hypot", resultType, args);
+    return genHypot(resultType, args);
   }
   llvm_unreachable("unexpected type in ABS argument");
 }
@@ -1892,6 +1894,19 @@ mlir::Value IntrinsicLibrary::genAimag(mlir::Type resultType,
   assert(args.size() == 1);
   return fir::factory::Complex{builder, loc}.extractComplexPart(
       args[0], true /* isImagPart */);
+}
+
+mlir::Value IntrinsicLibrary::genHypot(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+
+  auto two = builder.createIntegerConstant(loc, builder.getDefaultIntegerType(), 2);
+  auto lhs = genRuntimeCall("pow", resultType, {{ args[0], two }});
+  auto rhs = genRuntimeCall("pow", resultType, {{ args[1], two }});
+
+  auto sum = builder.create<mlir::arith::AddFOp>(loc, lhs, rhs);
+
+  return genRuntimeCall("sqrt", resultType, {{ sum }});
 }
 
 // ALL
