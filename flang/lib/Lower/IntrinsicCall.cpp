@@ -1178,6 +1178,11 @@ private:
         return fromIntTy.getWidth() > toIntTy.getWidth() ? Conversion::Narrow
                                                          : Conversion::Extend;
       }
+      if (fir::isa_real(to)) {
+        if (fromIntTy.getWidth() == 32 && getFloatingPointWidth(to) == 64) {
+          return Conversion::Extend;
+        }
+      }
     }
     if (fir::isa_real(from) && fir::isa_real(to)) {
       return getFloatingPointWidth(from) > getFloatingPointWidth(to)
