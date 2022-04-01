@@ -947,7 +947,8 @@ enum MathRuntimeVersion {
   fastVersion,
   relaxedVersion,
   preciseVersion,
-  llvmOnly
+  llvmOnly,
+  llvmPgmath
 };
 llvm::cl::opt<MathRuntimeVersion> mathRuntimeVersion(
     "math-runtime", llvm::cl::desc("Select math runtime version:"),
@@ -956,7 +957,9 @@ llvm::cl::opt<MathRuntimeVersion> mathRuntimeVersion(
         clEnumValN(relaxedVersion, "relaxed", "use pgmath relaxed runtime"),
         clEnumValN(preciseVersion, "precise", "use pgmath precise runtime"),
         clEnumValN(llvmOnly, "llvm",
-                   "only use LLVM intrinsics (may be incomplete)")),
+                   "only use LLVM intrinsics (may be incomplete)"),
+        clEnumValN(llvmPgmath, "llvm-pgmath",
+                   "use LLVM intrinsics if possible")),
     llvm::cl::init(fastVersion));
 
 struct RuntimeFunction {
@@ -1285,10 +1288,19 @@ static mlir::FuncOp getRuntimeFunction(mlir::Location loc,
     match = searchFunctionInLibrary(loc, builder, pgmathP, name, funcType,
                                     &bestNearMatch, bestMatchDistance);
   } else {
-    assert(mathRuntimeVersion == llvmOnly && "unknown math runtime");
+    assert((mathRuntimeVersion == llvmOnly || mathRuntimeVersion == llvmPgmath)
+           && "unknown math runtime");
   }
   if (match)
     return match;
+
+  bool allowFallback = mathRuntimeVersion == llvmPgmath;
+
+  // Hard-coded to Fast for now. We could be more flexible once we
+  // separate runtime and precision specifications, e.g. with an
+  // `ffp-model` argument.
+  auto pgmathFallback = [&]() { return searchFunctionInLibrary(loc, builder, pgmathF, name, funcType,
+                                                               &bestNearMatch, bestMatchDistance); };
 
   // Go through llvm intrinsics if not exact match in libpgmath or if
   // mathRuntimeVersion == llvmOnly
@@ -1301,6 +1313,10 @@ static mlir::FuncOp getRuntimeFunction(mlir::Location loc,
 
   if (bestNearMatch != nullptr) {
     if (bestMatchDistance.isLosingPrecision()) {
+      if (allowFallback) {
+        return pgmathFallback();
+      }
+
       // Using this runtime version requires narrowing the arguments
       // or extending the result. It is not numerically safe. There
       // is currently no quad math library that was described in
@@ -1327,6 +1343,11 @@ static mlir::FuncOp getRuntimeFunction(mlir::Location loc,
     }
     return getFuncOp(loc, builder, *bestNearMatch);
   }
+
+  if (allowFallback) {
+    return pgmathFallback();
+  }
+
   return {};
 }
 
