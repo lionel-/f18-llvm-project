@@ -1020,6 +1020,18 @@ static mlir::FunctionType genF128F128F128FuncType(mlir::MLIRContext *context) {
   return mlir::FunctionType::get(context, {t, t}, {t});
 }
 
+static mlir::FunctionType genF32I32F32FuncType(mlir::MLIRContext *context) {
+  auto f = mlir::FloatType::getF32(context);
+  auto i = mlir::IntegerType::get(context, 32);
+  return mlir::FunctionType::get(context, {f, i}, {f});
+}
+
+static mlir::FunctionType genF64I32F64FuncType(mlir::MLIRContext *context) {
+  auto f = mlir::FloatType::getF64(context);
+  auto i = mlir::IntegerType::get(context, 32);
+  return mlir::FunctionType::get(context, {f, i}, {f});
+}
+
 template <int Bits>
 static mlir::FunctionType genIntF64FuncType(mlir::MLIRContext *context) {
   auto t = mlir::FloatType::getF64(context);
@@ -1068,6 +1080,8 @@ static constexpr RuntimeFunction llvmIntrinsics[] = {
     {"nint", "llvm.lround.i32.f32", genIntF32FuncType<32>},
     {"pow", "llvm.pow.f32", genF32F32F32FuncType},
     {"pow", "llvm.pow.f64", genF64F64F64FuncType},
+    {"pow", "llvm.powi.f32.i32", genF32I32F32FuncType},
+    {"pow", "llvm.powi.f64.i32", genF64I32F64FuncType},
     {"sign", "llvm.copysign.f32", genF32F32F32FuncType},
     {"sign", "llvm.copysign.f64", genF64F64F64FuncType},
     {"sign", "llvm.copysign.f80", genF80F80F80FuncType},
