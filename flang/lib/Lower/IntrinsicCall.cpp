@@ -947,7 +947,8 @@ enum MathRuntimeVersion {
   fastVersion,
   relaxedVersion,
   preciseVersion,
-  llvmOnly
+  llvmOnly,
+  llvmPgmath
 };
 llvm::cl::opt<MathRuntimeVersion> mathRuntimeVersion(
     "math-runtime", llvm::cl::desc("Select math runtime version:"),
@@ -956,7 +957,9 @@ llvm::cl::opt<MathRuntimeVersion> mathRuntimeVersion(
         clEnumValN(relaxedVersion, "relaxed", "use pgmath relaxed runtime"),
         clEnumValN(preciseVersion, "precise", "use pgmath precise runtime"),
         clEnumValN(llvmOnly, "llvm",
-                   "only use LLVM intrinsics (may be incomplete)")),
+                   "only use LLVM intrinsics (may be incomplete)"),
+        clEnumValN(llvmPgmath, "llvm-pgmath",
+                   "use LLVM intrinsics if possible")),
     llvm::cl::init(fastVersion));
 
 struct RuntimeFunction {
@@ -1017,6 +1020,18 @@ static mlir::FunctionType genF128F128F128FuncType(mlir::MLIRContext *context) {
   return mlir::FunctionType::get(context, {t, t}, {t});
 }
 
+static mlir::FunctionType genF32I32F32FuncType(mlir::MLIRContext *context) {
+  auto f = mlir::FloatType::getF32(context);
+  auto i = mlir::IntegerType::get(context, 32);
+  return mlir::FunctionType::get(context, {f, i}, {f});
+}
+
+static mlir::FunctionType genF64I32F64FuncType(mlir::MLIRContext *context) {
+  auto f = mlir::FloatType::getF64(context);
+  auto i = mlir::IntegerType::get(context, 32);
+  return mlir::FunctionType::get(context, {f, i}, {f});
+}
+
 template <int Bits>
 static mlir::FunctionType genIntF64FuncType(mlir::MLIRContext *context) {
   auto t = mlir::FloatType::getF64(context);
@@ -1065,6 +1080,8 @@ static constexpr RuntimeFunction llvmIntrinsics[] = {
     {"nint", "llvm.lround.i32.f32", genIntF32FuncType<32>},
     {"pow", "llvm.pow.f32", genF32F32F32FuncType},
     {"pow", "llvm.pow.f64", genF64F64F64FuncType},
+    {"pow", "llvm.powi.f32.i32", genF32I32F32FuncType},
+    {"pow", "llvm.powi.f64.i32", genF64I32F64FuncType},
     {"sign", "llvm.copysign.f32", genF32F32F32FuncType},
     {"sign", "llvm.copysign.f64", genF64F64F64FuncType},
     {"sign", "llvm.copysign.f80", genF80F80F80FuncType},
@@ -1178,6 +1195,11 @@ private:
         return fromIntTy.getWidth() > toIntTy.getWidth() ? Conversion::Narrow
                                                          : Conversion::Extend;
       }
+      if (fir::isa_real(to)) {
+        if (fromIntTy.getWidth() == 32 && getFloatingPointWidth(to) == 64) {
+          return Conversion::Extend;
+        }
+      }
     }
     if (fir::isa_real(from) && fir::isa_real(to)) {
       return getFloatingPointWidth(from) > getFloatingPointWidth(to)
@@ -1280,10 +1302,19 @@ static mlir::FuncOp getRuntimeFunction(mlir::Location loc,
     match = searchFunctionInLibrary(loc, builder, pgmathP, name, funcType,
                                     &bestNearMatch, bestMatchDistance);
   } else {
-    assert(mathRuntimeVersion == llvmOnly && "unknown math runtime");
+    assert((mathRuntimeVersion == llvmOnly || mathRuntimeVersion == llvmPgmath)
+           && "unknown math runtime");
   }
   if (match)
     return match;
+
+  bool allowFallback = mathRuntimeVersion == llvmPgmath;
+
+  // Hard-coded to Fast for now. We could be more flexible once we
+  // separate runtime and precision specifications, e.g. with an
+  // `ffp-model` argument.
+  auto pgmathFallback = [&]() { return searchFunctionInLibrary(loc, builder, pgmathF, name, funcType,
+                                                               &bestNearMatch, bestMatchDistance); };
 
   // Go through llvm intrinsics if not exact match in libpgmath or if
   // mathRuntimeVersion == llvmOnly
@@ -1296,6 +1327,10 @@ static mlir::FuncOp getRuntimeFunction(mlir::Location loc,
 
   if (bestNearMatch != nullptr) {
     if (bestMatchDistance.isLosingPrecision()) {
+      if (allowFallback) {
+        return pgmathFallback();
+      }
+
       // Using this runtime version requires narrowing the arguments
       // or extending the result. It is not numerically safe. There
       // is currently no quad math library that was described in
@@ -1322,6 +1357,11 @@ static mlir::FuncOp getRuntimeFunction(mlir::Location loc,
     }
     return getFuncOp(loc, builder, *bestNearMatch);
   }
+
+  if (allowFallback) {
+    return pgmathFallback();
+  }
+
   return {};
 }
 

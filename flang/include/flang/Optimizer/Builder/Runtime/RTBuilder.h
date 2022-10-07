@@ -33,6 +33,10 @@
 struct c_float_complex_t;
 struct c_double_complex_t;
 
+namespace std {
+struct flang_size_t { };
+} // namespace std
+
 namespace Fortran::runtime {
 class Descriptor;
 }
@@ -164,6 +168,12 @@ template <>
 constexpr TypeBuilderFunc getModel<unsigned long>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return mlir::IntegerType::get(context, 8 * sizeof(unsigned long));
+  };
+}
+template <>
+constexpr TypeBuilderFunc getModel<std::flang_size_t>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return IndexType::get(context);
   };
 }
 template <>
